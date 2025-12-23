@@ -458,7 +458,9 @@ async def perform_emote(team_code: str, uids: list, emote_id: int):
         return {"status": "success", "message": "Emote performed successfully!"}
     except Exception as e:
         raise Exception(f"Failed to perform emote: {str(e)}")
-
+@app.route('/ping')
+def ping():
+    return jsonify({"status": "alive"}), 200
 @app.route('/join')
 def join_team():
     global loop
