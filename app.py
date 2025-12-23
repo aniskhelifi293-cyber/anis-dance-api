@@ -8,11 +8,9 @@ from concurrent.futures import ThreadPoolExecutor
 from threading import Thread
 from Pb2 import DEcwHisPErMsG_pb2 , MajoRLoGinrEs_pb2 , PorTs_pb2 , MajoRLoGinrEq_pb2 , sQ_pb2 , Team_msg_pb2
 from cfonts import render, say
-
+import random
 
 #EMOTES BY PARAHEX X CODEX
-
-
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)  
 
@@ -431,8 +429,8 @@ async def TcPChaT(ip, port, AutHToKen, key, iv, LoGinDaTaUncRypTinG, ready_event
                             
             whisper_writer.close() ; await whisper_writer.wait_closed() ; whisper_writer = None
                     
-                    	
-                    	
+                        
+                        
         except Exception as e: print(f"ErroR {ip}:{port} - {e}") ; whisper_writer = None
         await asyncio.sleep(reconnect_delay)
 
@@ -458,9 +456,7 @@ async def perform_emote(team_code: str, uids: list, emote_id: int):
         return {"status": "success", "message": "Emote performed successfully!"}
     except Exception as e:
         raise Exception(f"Failed to perform emote: {str(e)}")
-@app.route('/ping')
-def ping():
-    return jsonify({"status": "alive"}), 200
+
 @app.route('/join')
 def join_team():
     global loop
@@ -498,6 +494,10 @@ def join_team():
         "emote_id": emote_id_str,
         "message": "Emote performed successfully!"
     })
+
+@app.route('/ping')
+def ping():
+    return jsonify({"status": "alive"}), 200
 
 async def MaiiiinE():
     global loop, key, iv, region
@@ -550,10 +550,6 @@ async def MaiiiinE():
     print(f" - BoT STarTinG And OnLine on TarGet : {TarGeT} | BOT NAME : {acc_name}\n")
     print(f" - BoT sTaTus > GooD | OnLinE ! (:")
     
-    # Start Flask in a separate thread
-    flask_thread = threading.Thread(target=run_flask, daemon=True)
-    flask_thread.start()
-    
     await asyncio.gather(task1 , task2)
     
 async def StarTinG():
@@ -562,15 +558,16 @@ async def StarTinG():
         except asyncio.TimeoutError: print("Token ExpiRed ! , ResTartinG")
         except Exception as e: print(f"ErroR TcP - {e} => ResTarTinG ...")
 
-# استبدل الجزء في الأسفل بهذا الكود:
+def start_bot_background():
+    """Runs the async bot loop in a separate thread."""
+    asyncio.run(StarTinG())
 
 if __name__ == '__main__':
-    # 1. تشغيل عملية الشات والسوكت في ثريد خلفي (Daemon)
-    # بحيث لو انتهى التطبيق الرئيسي هذا الثريد يغلق
-    socket_thread = threading.Thread(target=lambda: asyncio.run(StarTinG()), daemon=True)
-    socket_thread.start()
-
-    # 2. جعل Flask هو العملية الرئيسية التي تُشغل في الطرفية
-    # هذا سيجعل Render يرى سيرفر ويب يعمل بشكل طبيعي
-    port = int(os.environ.get("PORT", 5000)) # قراءة المنفذ من البيئة
-    app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
+    # Start the async bot in a background thread
+    bot_thread = threading.Thread(target=start_bot_background, daemon=True)
+    bot_thread.start()
+    
+    # Run Flask as the main process
+    # Get port from environment variable for Render/Heroku compatibility
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
