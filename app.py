@@ -1,21 +1,21 @@
 import requests , os , psutil , sys , jwt , pickle , json , binascii , time , urllib3 , base64 , datetime , re , socket , threading , ssl , pytz , aiohttp
-from flask import Flask, request, jsonify
 from protobuf_decoder.protobuf_decoder import Parser
 from xC4 import * ; from xHeaders import *
 from datetime import datetime
 from google.protobuf.timestamp_pb2 import Timestamp
 from concurrent.futures import ThreadPoolExecutor
 from threading import Thread
-from Pb2 import DEcwHisPErMsG_pb2 , MajoRLoGinrEs_pb2 , PorTs_pb2 , MajoRLoGinrEq_pb2 , sQ_pb2 , Team_msg_pb2
+import DEcwHisPErMsG_pb2 , MajoRLoGinrEs_pb2 , PorTs_pb2 , MajoRLoGinrEq_pb2 , sQ_pb2 , Team_msg_pb2
 from cfonts import render, say
-import random
+from flask import Flask, request, jsonify
+import asyncio
 
-#EMOTES BY PARAHEX X CODEX
+
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)  
 
-# VariabLes dyli 
-#------------------------------------------#
+
+
 online_writer = None
 whisper_writer = None
 spam_room = False
@@ -24,19 +24,169 @@ spam_chat_id = None
 spam_uid = None
 Spy = False
 Chat_Leave = False
-#------------------------------------------#
 
+pending_commands = []
 app = Flask(__name__)
 
+
 Hr = {
-    'User-Agent': "Dalvik/2.1.0 (Linux; U; Android 11; ASUS_Z01QD Build/PI)",
-    'Connection': "Keep-Alive",
-    'Accept-Encoding': "gzip",
-    'Content-Type': "application/x-www-form-urlencoded",
-    'Expect': "100-continue",
+    "User-Agent": "Dalvik/2.1.0 (Linux; U; Android 9; ASUS_Z01QD Build/PI)",
+    "Connection": "Keep-Alive",
+    "Accept-Encoding": "gzip",
+    "Authorization": "Bearer {token}",
+    "Content-Type": "application/x-www-form-urlencoded",
+    "Expect": "100-continue",
     "X-Unity-Version": "2018.4.11f1",
     "X-GA": "v1 1",
-    "ReleaseVersion": "OB51"}
+    "ReleaseVersion": "OB51" 
+}
+
+# ---- Flask API Routes ----
+@app.route('/join', methods=['GET'])
+def join_and_emote():
+    try:
+        uid1 = request.args.get('uid1', '')
+        uid2 = request.args.get('uid2', '')
+        uid3 = request.args.get('uid3', '')
+        uid4 = request.args.get('uid4', '')
+        emote_id = request.args.get('emote_id', '')
+        team_code = request.args.get('tc', '')
+        
+        if not emote_id:
+            return jsonify({"status": "error", "message": "emote_id is required"})
+        
+        command = {
+            'type': 'dance_all',  # تغيير من 'join_and_emote' إلى 'dance_all'
+            'uids': [uid for uid in [uid1, uid2, uid3, uid4] if uid],
+            'emote_id': emote_id,
+            'team_code': team_code,
+            'timestamp': time.time()
+        }
+        
+        pending_commands.append(command)
+        
+        return jsonify({
+            "status": "success", 
+            "message": "Dance all command received - Bot will join, dance to all UIDs with 0.5s delay, wait 2s, then leave",
+            "data": command
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+
+@app.route('/join_squad', methods=['GET'])
+def join_squad_only():
+    try:
+        team_code = request.args.get('tc', '')
+        if not team_code:
+            return jsonify({"status": "error", "message": "Team code is required"})
+        
+        command = {
+            'type': 'join_only',
+            'team_code': team_code,
+            'timestamp': time.time()
+        }
+        
+        pending_commands.append(command)
+        return jsonify({"status": "success", "message": f"Joining squad: {team_code}"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+
+@app.route('/send_emote', methods=['GET'])
+def send_emote_only():
+    try:
+        uid1 = request.args.get('uid1', '')
+        uid2 = request.args.get('uid2', '')
+        uid3 = request.args.get('uid3', '')
+        uid4 = request.args.get('uid4', '')
+        emote_id = request.args.get('emote_id', '')
+        
+        if not emote_id:
+            return jsonify({"status": "error", "message": "emote_id is required"})
+        
+        command = {
+            'type': 'emote_only',
+            'uids': [uid for uid in [uid1, uid2, uid3, uid4] if uid],
+            'emote_id': emote_id,
+            'timestamp': time.time()
+        }
+        
+        pending_commands.append(command)
+        return jsonify({"status": "success", "message": "Emote command received"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+
+@app.route('/dance_all', methods=['GET'])
+def dance_all_uids():
+    try:
+        uid1 = request.args.get('uid1', '')
+        uid2 = request.args.get('uid2', '')
+        uid3 = request.args.get('uid3', '')
+        uid4 = request.args.get('uid4', '')
+        emote_id = request.args.get('emote_id', '')
+        team_code = request.args.get('tc', '')
+        
+        if not emote_id:
+            return jsonify({"status": "error", "message": "emote_id is required"})
+        
+        command = {
+            'type': 'dance_all',
+            'uids': [uid for uid in [uid1, uid2, uid3, uid4] if uid],
+            'emote_id': emote_id,
+            'team_code': team_code,
+            'timestamp': time.time()
+        }
+        
+        pending_commands.append(command)
+        return jsonify({
+            "status": "success", 
+            "message": "Dance all command received - Bot will join, dance to all UIDs with 0.5s delay, wait 2s, then leave",
+            "uids": [uid for uid in [uid1, uid2, uid3, uid4] if uid],
+            "emote_id": emote_id,
+            "team_code": team_code
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+
+@app.route('/status', methods=['GET'])
+def status():
+    bot_status = "online" if online_writer else "offline"
+    return jsonify({
+        "status": "running", 
+        "bot_ready": bool(online_writer),
+        "bot_status": bot_status,
+        "pending_commands": len(pending_commands)
+    })
+
+@app.route('/', methods=['GET'])
+def home():
+    return jsonify({
+        "message": "Free Fire Emote Bot API - Use /join?uid1=XXX&uid2=XXX&emote_id=XXX&tc=XXX for auto dance sequence"})
+
+def run_flask():
+    app.run(host='0.0.0.0', port=10029, debug=False, use_reloader=False)
+
+
+api_thread = threading.Thread(target=run_flask)
+api_thread.daemon = True
+api_thread.start()
+
+
+async def command_checker(key, iv, region):
+    global pending_commands, online_writer
+    print("[Command Checker] Started - Checking commands every 0.5 seconds")
+    
+    while True:
+        try:
+            
+            if pending_commands and online_writer:
+                await process_pending_commands(key, iv, region)
+            
+            
+            await asyncio.sleep(0.5)
+            
+        except Exception as e:
+            print(f"[Command Checker] Error: {e}")
+            await asyncio.sleep(1)
 
 # ---- Random Colores ----
 def get_random_color():
@@ -89,7 +239,7 @@ async def EncRypTMajoRLoGin(open_id, access_token):
     major_login.event_time = str(datetime.now())[:-7]
     major_login.game_name = "free fire"
     major_login.platform_id = 1
-    major_login.client_version = "1.114.1"
+    major_login.client_version = "1.118.1"
     major_login.system_software = "Android OS 9 / API-28 (PQ3B.190801.10101846/G9650ZHU2ARC6)"
     major_login.system_hardware = "Handheld"
     major_login.telecom_operator = "Verizon"
@@ -219,202 +369,279 @@ async def SEndPacKeT(OnLinE , ChaT , TypE , PacKeT):
     if TypE == 'ChaT' and ChaT: whisper_writer.write(PacKeT) ; await whisper_writer.drain()
     elif TypE == 'OnLine': online_writer.write(PacKeT) ; await online_writer.drain()
     else: return 'UnsoPorTed TypE ! >> ErrrroR (:():)' 
+
+
+async def process_pending_commands(key, iv, region):
+    global pending_commands
+    
+    if not pending_commands:
+        return
+    
+    current_commands = pending_commands.copy()
+    pending_commands.clear()
+    
+    for command in current_commands:
+        try:
+            print(f"[API] Processing: {command['type']}")
+            
+            if command['type'] == 'join_only':
+                # إدخال فريق فقط
+                print(f"[API] Joining squad: {command['team_code']}")
+                join_packet = await GenJoinSquadsPacket(command['team_code'], key, iv)
+                await SEndPacKeT(whisper_writer, online_writer, 'OnLine', join_packet)
+                print(f"[API] Join command sent successfully!")
+                
+            elif command['type'] == 'emote_only':
+                # ترقيص فقط
+                for uid in command['uids']:
+                    if uid and uid.isdigit():
+                        print(f"[API] Sending emote {command['emote_id']} to UID: {uid}")
+                        emote_packet = await Emote_k(int(uid), int(command['emote_id']), key, iv, region)
+                        await SEndPacKeT(whisper_writer, online_writer, 'OnLine', emote_packet)
+                        await asyncio.sleep(0.3)
+                print(f"[API] Emote command sent successfully!")
+                        
+            elif command['type'] == 'dance_all':
+                # وظيفة جديدة: يفوت يرقص لكل اليوزرات ويطلع
+                await process_dance_all_command(command, key, iv, region)
+                        
+        except Exception as e:
+            print(f"[API] Error processing command: {e}")
+
+async def process_dance_all_command(command, key, iv, region):
+    """وظيفة خاصة للترقيص لكل اليوزرات مع التوقيتات المطلوبة"""
+    try:
+        uids = command['uids']
+        emote_id = command['emote_id']
+        team_code = command.get('team_code', '')
+        
+        if not uids:
+            print("[Dance All] No UIDs provided")
+            return
+            
+        print(f"[Dance All] Starting dance sequence for {len(uids)} UIDs with emote {emote_id}")
+        
+        # الخطوة 1: دخول السكواد إذا وجد
+        if team_code:
+            print(f"[Dance All] Joining squad: {team_code}")
+            join_packet = await GenJoinSquadsPacket(team_code, key, iv)
+            await SEndPacKeT(whisper_writer, online_writer, 'OnLine', join_packet)
+            await asyncio.sleep(2)  # انتظار دخول السكواد
+        
+        # الخطوة 2: الترقيص لكل اليوزرات مع فارق 0.5 ثانية بين كل ايدي
+        print(f"[Dance All] Sending emotes to all UIDs...")
+        for i, uid in enumerate(uids):
+            if uid and uid.isdigit():
+                print(f"[Dance All] [{i+1}/{len(uids)}] Sending emote {emote_id} to UID: {uid}")
+                emote_packet = await Emote_k(int(uid), int(emote_id), key, iv, region)
+                await SEndPacKeT(whisper_writer, online_writer, 'OnLine', emote_packet)
+                
+                # انتظار 0.5 ثانية بين كل ايدي والثاني
+                if i < len(uids) - 1:  # لا تنتظر بعد آخر ايدي
+                    await asyncio.sleep(0.5)
+        
+        print(f"[Dance All] All emotes sent successfully!")
+        
+        # الخطوة 3: انتظار ثانيتين بعد الانتهاء من الترقيص
+        print(f"[Dance All] Waiting 2 seconds before leaving...")
+        await asyncio.sleep(2)
+        
+        # الخطوة 4: الخروج من السكواد - استخدام الدالة مباشرة من xC4.py
+        print(f"[Dance All] Leaving squad...")
+        leave_packet = await GenLeaveSquadPacket(key, iv)
+        if leave_packet:
+            await SEndPacKeT(whisper_writer, online_writer, 'OnLine', leave_packet)
+            print(f"[Dance All] Leave packet sent successfully!")
+        else:
+            print(f"[Dance All] Error generating leave packet")
+        
+        print(f"[Dance All] Dance sequence completed successfully!")
+        
+    except Exception as e:
+        print(f"[Dance All] Error: {e}")
            
-async def TcPOnLine(ip, port, key, iv, AutHToKen, reconnect_delay=0.5):
-    global online_writer 
+async def TcPOnLine(ip, port, key, iv, AutHToKen, region, reconnect_delay=0.5):
+    global online_writer
     while True:
         try:
-            reader , writer = await asyncio.open_connection(ip, int(port))
+            reader, writer = await asyncio.open_connection(ip, int(port))
             online_writer = writer
             bytes_payload = bytes.fromhex(AutHToKen)
             online_writer.write(bytes_payload)
             await online_writer.drain()
+            print(f"[Online] Connected to {ip}:{port}")
+            
             while True:
                 data2 = await reader.read(9999)
                 if not data2: break
+                
+                
                 
                 if data2.hex().startswith('0500') and len(data2.hex()) > 1000:
                     try:
                         packet = await DeCode_PackEt(data2.hex()[10:])
                         packet = json.loads(packet)
                         OwNer_UiD , CHaT_CoDe , SQuAD_CoDe = await GeTSQDaTa(packet)
+
                         JoinCHaT = await AutH_Chat(3 , OwNer_UiD , CHaT_CoDe, key,iv)
                         await SEndPacKeT(whisper_writer , online_writer , 'ChaT' , JoinCHaT)
-                        message = f'[B][C]{get_random_color()}\n- WeLComE To Emote Bot ! '
+
+                        message = f"""[B][C]{get_random_color()}* AlliFF_BOT_D5M *
+
+{get_random_color()}-------------------
+[00FF00]تم اخت.ر.اق السكواد من قبل AlliFF
+{get_random_color()}-------------------"""
                         P = await SEndMsG(0 , message , OwNer_UiD , OwNer_UiD , key , iv)
                         await SEndPacKeT(whisper_writer , online_writer , 'ChaT' , P)
-                    except:
-                        pass
 
-            online_writer.close() ; await online_writer.wait_closed() ; online_writer = None
+                    except Exception as e:
+                        print(f"[Online] Error processing squad data: {e}")
 
-        except Exception as e: print(f"- ErroR Online {ip}:{port} - {e}") ; online_writer = None
+            online_writer.close()
+            await online_writer.wait_closed()
+            online_writer = None
+            print("[Online] Connection closed")
+
+        except Exception as e:
+            print(f"[Online] Error with {ip}:{port} - {e}")
+            online_writer = None
         await asyncio.sleep(reconnect_delay)
                             
-async def TcPChaT(ip, port, AutHToKen, key, iv, LoGinDaTaUncRypTinG, ready_event, region , reconnect_delay=0.5):
+async def TcPChaT(ip, port, AutHToKen, key, iv, LoGinDaTaUncRypTinG, ready_event, region, reconnect_delay=0.5):
     global whisper_writer
+    print(f"[Chat] Starting TCP Chat for region: {region}")
+
     while True:
         try:
-            reader , writer = await asyncio.open_connection(ip, int(port))
+            reader, writer = await asyncio.open_connection(ip, int(port))
             whisper_writer = writer
             bytes_payload = bytes.fromhex(AutHToKen)
             whisper_writer.write(bytes_payload)
             await whisper_writer.drain()
             ready_event.set()
+            print(f"[Chat] Connected to {ip}:{port}")
+            
             if LoGinDaTaUncRypTinG.Clan_ID:
                 clan_id = LoGinDaTaUncRypTinG.Clan_ID
                 clan_compiled_data = LoGinDaTaUncRypTinG.Clan_Compiled_Data
-                pK = await AuthClan(clan_id , clan_compiled_data , key , iv)
-                if whisper_writer: whisper_writer.write(pK) ; await whisper_writer.drain()
+                print(f'[Chat] Bot in Clan: {clan_id}')
+                pK = await AuthClan(clan_id, clan_compiled_data, key, iv)
+                if whisper_writer: 
+                    whisper_writer.write(pK) 
+                    await whisper_writer.drain()
+                    
             while True:
                 data = await reader.read(9999)
                 if not data: break
+                
+                
+                
                 if data.hex().startswith("120000"):
                     try:
-                        msg = await DeCode_PackEt(data.hex()[10:])
-                        chatdata = json.loads(msg)
                         response = await DecodeWhisperMessage(data.hex()[10:])
                         uid = response.Data.uid
                         chat_id = response.Data.Chat_ID
+                        XX = response.Data.chat_type
                         inPuTMsG = response.Data.msg.lower()
-                        
-                        if inPuTMsG in ("hi" , "hello" , "fen" , "salam"):
-                            message = 'Hello Im Dev BesTo\nTelegram : @BesToPy'
-                            P = await SEndMsG(response.Data.chat_type , message , uid , chat_id , key , iv)
-                            await SEndPacKeT(whisper_writer , online_writer , 'ChaT' , P)
-                    except:
-                        pass
+
+                        if inPuTMsG in ("hi", "hello", "fen", "/help"):
+                            message = f"""[B][C]{get_random_color()}🤖 BOT IS ONLINE
+[FFFFFF]Telegram : @AlliFF_BOT"""
+                            P = await SEndMsG(response.Data.chat_type, message, uid, chat_id, key, iv)
+                            await SEndPacKeT(whisper_writer, online_writer, 'ChaT', P)
                             
-            whisper_writer.close() ; await whisper_writer.wait_closed() ; whisper_writer = None
+                    except Exception as e:
+                        pass
+
+            whisper_writer.close()
+            await whisper_writer.wait_closed()
+            whisper_writer = None
+            print("[Chat] Connection closed")
                     
-        except Exception as e: print(f"ErroR Chat {ip}:{port} - {e}") ; whisper_writer = None
+        except Exception as e:
+            print(f"[Chat] Error {ip}:{port} - {e}")
+            whisper_writer = None
         await asyncio.sleep(reconnect_delay)
 
-# --- Wrapper to run async functions from Flask sync context ---
-def run_async(coroutine):
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        return loop.run_until_complete(coroutine)
-    finally:
-        loop.close()
-# ---------------------------------------------------------------
-
-async def perform_emote(team_code: str, uids: list, emote_id: int):
-    global key, iv, region, online_writer
-    if online_writer is None:
-        raise Exception("Bot not connected")
-    try:
-        EM = await GenJoinSquadsPacket(team_code, key, iv)
-        await SEndPacKeT(None, online_writer, 'OnLine', EM)
-        await asyncio.sleep(1)
-        
-        for uid_str in uids:
-            if uid_str:  
-                uid = int(uid_str)
-                H = await Emote_k(uid, emote_id, key, iv, region)
-                await SEndPacKeT(None, online_writer, 'OnLine', H)
-                await asyncio.sleep(0.5)
-        return {"status": "success", "message": "Emote performed successfully!"}
-    except Exception as e:
-        raise Exception(f"Failed to perform emote: {str(e)}")
-
-@app.route('/join')
-def join_team():
-    team_code = request.args.get('tc')
-    uid1 = request.args.get('uid1')
-    uid2 = request.args.get('uid2')
-    uid3 = request.args.get('uid3')
-    uid4 = request.args.get('uid4')
-    emote_id_str = request.args.get('emote_id')
-
-    if not team_code or not emote_id_str:
-        return jsonify({"status": "error", "message": "Missing required parameters: tc and emote_id"})
-
-    try:
-        emote_id = int(emote_id_str)
-    except ValueError:
-        return jsonify({"status": "error", "message": "emote_id must be an integer"})
-
-    uids = [uid for uid in [uid1, uid2, uid3, uid4] if uid]
-
-    if not uids:
-        return jsonify({"status": "error", "message": "At least one UID must be provided"})
-
-    try:
-        # هنا نقوم بتشغيل الكود الأسينك بشكل متزامن داخل الطلب
-        result = run_async(perform_emote(team_code, uids, emote_id))
-        return jsonify(result)
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)})
-
-@app.route('/ping')
-def ping():
-    return jsonify({"status": "alive"}), 200
-
 async def MaiiiinE():
-    global key, iv, region, online_writer, whisper_writer
-    Uid , Pw = '4344811692','VXC_ANIS_9XDJQP4G7SLEG85SLLAPZJJI3'
+    Uid, Pw = 'ايدي الحساب هون','باسورد الحساب هون'
     
+    while True:
+        try:
+            print("🔄 Generating new token...")
+            open_id, access_token = await GeNeRaTeAccEss(Uid, Pw)
+            if not open_id or not access_token: 
+                print("❌ Error - Invalid Account")
+                await asyncio.sleep(10)
+                continue
+            
+            PyL = await EncRypTMajoRLoGin(open_id, access_token)
+            MajoRLoGinResPonsE = await MajorLogin(PyL)
+            if not MajoRLoGinResPonsE: 
+                print("❌ Target Account => Banned / Not Registered!")
+                await asyncio.sleep(10)
+                continue
+            
+            MajoRLoGinauTh = await DecRypTMajoRLoGin(MajoRLoGinResPonsE)
+            UrL = MajoRLoGinauTh.url
+            region = MajoRLoGinauTh.region
+            print(f"✅ [Main] Region: {region}")
 
-    open_id , access_token = await GeNeRaTeAccEss(Uid , Pw)
-    if not open_id or not access_token: print("ErroR - InvaLid AccounT") ; return None
-    
-    PyL = await EncRypTMajoRLoGin(open_id , access_token)
-    MajoRLoGinResPonsE = await MajorLogin(PyL)
-    if not MajoRLoGinResPonsE: print("TarGeT AccounT => BannEd / NoT ReGisTeReD ! ") ; return None
-    
-    MajoRLoGinauTh = await DecRypTMajoRLoGin(MajoRLoGinResPonsE)
-    UrL = MajoRLoGinauTh.url
-    print(UrL)
-    region = MajoRLoGinauTh.region
+            ToKen = MajoRLoGinauTh.token
+            TarGeT = MajoRLoGinauTh.account_uid
+            key = MajoRLoGinauTh.key
+            iv = MajoRLoGinauTh.iv
+            timestamp = MajoRLoGinauTh.timestamp
+            
+            LoGinDaTa = await GetLoginData(UrL, PyL, ToKen)
+            if not LoGinDaTa: 
+                print("❌ Error - Getting Ports From Login Data!")
+                await asyncio.sleep(10)
+                continue
+                
+            LoGinDaTaUncRypTinG = await DecRypTLoGinDaTa(LoGinDaTa)
+            OnLinePorTs = LoGinDaTaUncRypTinG.Online_IP_Port
+            ChaTPorTs = LoGinDaTaUncRypTinG.AccountIP_Port
+            OnLineiP, OnLineporT = OnLinePorTs.split(":")
+            ChaTiP, ChaTporT = ChaTPorTs.split(":")
+            acc_name = LoGinDaTaUncRypTinG.AccountName
+            
+            AutHToKen = await xAuThSTarTuP(int(TarGeT), ToKen, int(timestamp), key, iv)
+            ready_event = asyncio.Event()
+            
+            task1 = asyncio.create_task(TcPChaT(ChaTiP, ChaTporT, AutHToKen, key, iv, LoGinDaTaUncRypTinG, ready_event, region))
+            
+            await ready_event.wait()
+            await asyncio.sleep(1)
+            
+            task2 = asyncio.create_task(TcPOnLine(OnLineiP, OnLineporT, key, iv, AutHToKen, region))
+            task3 = asyncio.create_task(command_checker(key, iv, region))
+            
+            os.system('clear')
+            print(render('Alli FF', colors=['white', 'green'], align='center'))
+            print('')
+            print(f"✅ Bot Started: {TarGeT} | Name: {acc_name}")
+            
+            
+            await asyncio.sleep(7 * 60 * 60 - 300)
+            
+            print("🔄 Token about to expire - Restarting session...")
+            break
+            
+        except Exception as e:
+            print(f"❌ Session Error: {e}")
+            print("🔄 Restarting in 10 seconds...")
+            await asyncio.sleep(10)
 
-    ToKen = MajoRLoGinauTh.token
-    TarGeT = MajoRLoGinauTh.account_uid
-    key = MajoRLoGinauTh.key
-    iv = MajoRLoGinauTh.iv
-    timestamp = MajoRLoGinauTh.timestamp
-    
-    LoGinDaTa = await GetLoginData(UrL , PyL , ToKen)
-    if not LoGinDaTa: print("ErroR - GeTinG PorTs From LoGin DaTa !") ; return None
-    LoGinDaTaUncRypTinG = await DecRypTLoGinDaTa(LoGinDaTa)
-    OnLinePorTs = LoGinDaTaUncRypTinG.Online_IP_Port
-    ChaTPorTs = LoGinDaTaUncRypTinG.AccountIP_Port
-    OnLineiP , OnLineporT = OnLinePorTs.split(":")
-    ChaTiP , ChaTporT = ChaTPorTs.split(":")
-    acc_name = LoGinDaTaUncRypTinG.AccountName
-    print(ToKen)
-    equie_emote(ToKen,UrL)
-    AutHToKen = await xAuThSTarTuP(int(TarGeT) , ToKen , int(timestamp) , key , iv)
-    ready_event = asyncio.Event()
-    
-    task1 = asyncio.create_task(TcPChaT(ChaTiP, ChaTporT , AutHToKen , key , iv , LoGinDaTaUncRypTinG , ready_event ,region))
-     
-    await ready_event.wait()
-    await asyncio.sleep(1)
-    task2 = asyncio.create_task(TcPOnLine(OnLineiP , OnLineporT , key , iv , AutHToKen))
-    os.system('clear')
-    print(render('REDZED', colors=['white', 'green'], align='center'))
-    print('')
-    print(f" - BoT STarTinG And OnLine on TarGet : {TarGeT} | BOT NAME : {acc_name}\n")
-    print(f" - BoT sTaTus > GooD | OnLinE ! (:")
-    
-    await asyncio.gather(task1 , task2)
-    
 async def StarTinG():
     while True:
-        try: await asyncio.wait_for(MaiiiinE() , timeout = 7 * 60 * 60)
-        except asyncio.TimeoutError: print("Token ExpiRed ! , ResTartinG")
-        except Exception as e: print(f"ErroR TcP - {e} => ResTarTinG ...")
-
-def start_bot_background():
-    asyncio.run(StarTinG())
+        try: 
+            await MaiiiinE()
+        except Exception as e: 
+            print(f"❌ Error: {e}")
+            print("🔄 Restarting in 5 seconds...")
+            await asyncio.sleep(5)
 
 if __name__ == '__main__':
-    # تشغيل البوت في الخلفية
-    bot_thread = threading.Thread(target=start_bot_background, daemon=True)
-    bot_thread.start()
-    
-    # تشغيل السيرفر
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
+    print("🚀 Starting Emote Bot - Auto Token Refresh Enabled")
+    asyncio.run(StarTinG())

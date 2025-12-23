@@ -1,4 +1,4 @@
-# By AbdeeLkarim BesTo
+# By Jnl Codex
 
 import requests , json , binascii , time , urllib3 , base64 , datetime , re ,socket , threading , random , os , asyncio
 from protobuf_decoder.protobuf_decoder import Parser
@@ -192,7 +192,16 @@ async def GenJoinSquadsPacket(code,  K , V):
     fields[2][9][8] = "1.111.1"
     fields[2][9][9] = 5
     fields[2][9][10] = 1
-    return await GeneRaTePk((await CrEaTe_ProTo(fields)).hex() , '0515' , K , V)   
+    return await GeneRaTePk((await CrEaTe_ProTo(fields)).hex() , '0515' , K , V)  
+    
+async def GenLeaveSquadPacket(K, V):
+    fields = {
+        1: 7,
+        2: {
+            1: 1,  # سبب الخروج (1 = خروج طوعي)
+        }
+    }
+    return await GeneRaTePk((await CrEaTe_ProTo(fields)).hex(), '0515', K, V) 
 async def GenJoinGlobaL(owner , code , K, V):
     fields = {
     1: 4,
