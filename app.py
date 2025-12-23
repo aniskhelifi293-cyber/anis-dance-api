@@ -499,11 +499,6 @@ def join_team():
         "message": "Emote performed successfully!"
     })
 
-def run_flask():
-    import os
-# ... داخل الكود
-    port = int(os.environ.get("PORT", 5000))
-# ثم استخدم المتغير port في التشغيل
 async def MaiiiinE():
     global loop, key, iv, region
     Uid , Pw = '4344811692','VXC_ANIS_9XDJQP4G7SLEG85SLLAPZJJI3'
@@ -567,5 +562,15 @@ async def StarTinG():
         except asyncio.TimeoutError: print("Token ExpiRed ! , ResTartinG")
         except Exception as e: print(f"ErroR TcP - {e} => ResTarTinG ...")
 
+# استبدل الجزء في الأسفل بهذا الكود:
+
 if __name__ == '__main__':
-    asyncio.run(StarTinG())
+    # 1. تشغيل عملية الشات والسوكت في ثريد خلفي (Daemon)
+    # بحيث لو انتهى التطبيق الرئيسي هذا الثريد يغلق
+    socket_thread = threading.Thread(target=lambda: asyncio.run(StarTinG()), daemon=True)
+    socket_thread.start()
+
+    # 2. جعل Flask هو العملية الرئيسية التي تُشغل في الطرفية
+    # هذا سيجعل Render يرى سيرفر ويب يعمل بشكل طبيعي
+    port = int(os.environ.get("PORT", 5000)) # قراءة المنفذ من البيئة
+    app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
