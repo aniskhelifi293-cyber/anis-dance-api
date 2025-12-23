@@ -459,7 +459,16 @@ async def perform_emote(team_code: str, uids: list, emote_id: int):
 
 @app.route('/join')
 def join_team():
-    global loop
+    global loop, online_writer, whisper_writer, key, iv, region
+
+    # --- التحقق الجديد من الاتصال ---
+    if online_writer is None or whisper_writer is None or loop is None:
+        return jsonify({
+            "status": "error", 
+            "message": "Bot is still connecting to the game server. Please wait a few seconds and try again."
+        }), 503
+    # -------------------------------
+
     team_code = request.args.get('tc')
     uid1 = request.args.get('uid1')
     uid2 = request.args.get('uid2')
@@ -482,21 +491,27 @@ def join_team():
     if not uids:
         return jsonify({"status": "error", "message": "At least one UID must be provided"})
 
-    # Fire and forget async call
-    future = asyncio.run_coroutine_threadsafe(
-        perform_emote(team_code, uids, emote_id), loop
-    )
-
-    return jsonify({
-        "status": "success",
-        "team_code": team_code,
-        "uids": uids,
-        "emote_id": emote_id_str,
-        "message": "Emote performed successfully!"
-    })
-
+    try:
+        # محاولة تنفيذ الأمر
+        future = asyncio.run_coroutine_threadsafe(
+            perform_emote(team_code, uids, emote_id), loop
+        )
+        # الانتظار قليلاً للتأكد من عدم وجود خطء فوري
+        future.result(timeout=5)
+        
+        return jsonify({
+            "status": "success",
+            "team_code": team_code,
+            "uids": uids,
+            "emote_id": emote_id_str,
+            "message": "Emote command sent!"
+        })
+        
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
 @app.route('/ping')
 def ping():
+    # هذه الدالة لا تحتاج للبوت، تعمل دائماً
     return jsonify({"status": "alive"}), 200
 
 async def MaiiiinE():
