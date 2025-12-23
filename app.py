@@ -500,8 +500,10 @@ def join_team():
     })
 
 def run_flask():
-    app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
-
+    import os
+# ... داخل الكود
+    port = int(os.environ.get("PORT", 5000))
+# ثم استخدم المتغير port في التشغيل
 async def MaiiiinE():
     global loop, key, iv, region
     Uid , Pw = '4344811692','VXC_ANIS_9XDJQP4G7SLEG85SLLAPZJJI3'
